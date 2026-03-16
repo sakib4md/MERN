@@ -1,0 +1,23 @@
+# Node (applies to both packages)
+node_modules/
+**/node_modules/
+
+# env files
+.env
+**/.env
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# Vite / build
+dist/
+build/
+.vite/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
