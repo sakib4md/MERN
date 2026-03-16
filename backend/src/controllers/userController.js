@@ -93,4 +93,18 @@ const getProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getProfile };
+/**
+ * @route  GET /api/users/all
+ * @access Private (requires JWT)
+ * Returns a list of all users with basic info
+ */
+const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await User.find({}, "name email createdAt").sort({ createdAt: -1 });
+    res.status(200).json({ success: true, users });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { registerUser, loginUser, getProfile, getAllUsers };

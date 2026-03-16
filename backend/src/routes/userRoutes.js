@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { body } = require("express-validator");
 
-const { registerUser, loginUser, getProfile } = require("../controllers/userController");
+const { registerUser, loginUser, getProfile, getAllUsers } = require("../controllers/userController");
 const { protect } = require("../middleware/authMiddleware");
 
 // Validation rules
@@ -23,5 +23,9 @@ router.post("/login", loginValidation, loginUser);
 
 // ===== PROTECTED ROUTES (JWT required) =====
 router.get("/profile", protect, getProfile);
+
+// ===== ADMIN / LISTING =====
+// Returns list of all users (protected)
+router.get("/all", protect, getAllUsers);
 
 module.exports = router;
