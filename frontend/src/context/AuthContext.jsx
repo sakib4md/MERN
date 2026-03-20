@@ -1,32 +1,35 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import api from "../api/axiosInstance";
 
 const AuthContext = createContext(null);
-
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem("token") || null);
   const [user, setUser] = useState(null);
+  const hasFetched = useRef(false); // ✅ blocks StrictMode double call
 
   useEffect(() => {
-    if (token) {
-      // ensure axios uses the token immediately (avoid race where interceptor reads localStorage too late)
-      api.defaults.headers = api.defaults.headers || {};
-      api.defaults.headers.Authorization = `Bearer ${token}`;
-      // try to load profile
-      api
-        .get("/api/users/profile")
-        .then((res) => setUser(res.data.user))
-        .catch(() => {
-          setToken(null);
-          setUser(null);
-          localStorage.removeItem("token");
-        });
-    }
+    if (!token) return;
+    if (hasFetched.current) return; // ✅ skip second StrictMode run
+    hasFetched.current = true;
+
+    const controller = new AbortController();
+
+    api.get("/api/users/profile", { signal: controller.signal })
+      .then((res) => setUser(res.data.user))
+      .catch((err) => {
+        if (err.name === "CanceledError") return;
+        setToken(null);
+        setUser(null);
+        localStorage.removeItem("token");
+      });
+
+    return () => controller.abort(); // ✅ cleanup on unmount
   }, [token]);
 
   const saveToken = (t) => {
+    hasFetched.current = false; // ✅ reset on new login
     setToken(t);
     if (t) localStorage.setItem("token", t);
     else localStorage.removeItem("token");

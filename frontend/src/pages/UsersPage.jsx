@@ -1,23 +1,20 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
 
 const UsersPage = () => {
   const { token } = useAuth();
-  const [users, setUsers] = useState(null);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (!token) return;
-    api
-      .get("/api/users/all")
-      .then((res) => setUsers(res.data.users))
-      .catch((err) => setError(err.response?.data?.message || "Failed to load users"));
-  }, [token]);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => api.get("/api/users/all").then(res => res.data.users),
+    enabled: !!token, // ✅ only runs if token exists
+    staleTime: 1000 * 60, // ✅ cache for 1 min, no refetch on revisit
+  });
 
-  if (!token) return <div style={{ padding: 20 }}>Please login to view connected users.</div>;
-  if (!users && !error) return <div style={{ padding: 20 }}>Loading...</div>;
-  if (error) return <div style={{ padding: 20, color: "salmon" }}>{error}</div>;
+  if (!token) return <div style={{ padding: 20 }}>Please login to view users.</div>;
+  if (isLoading) return <div style={{ padding: 20 }}>Loading...</div>;
+  if (error) return <div style={{ padding: 20, color: "salmon" }}>{error.message}</div>;
 
   return (
     <div style={{ padding: 20 }}>
@@ -31,11 +28,13 @@ const UsersPage = () => {
           </tr>
         </thead>
         <tbody>
-          {users.map((u) => (
-            <tr key={u._id || u.id}>
+          {data.map((u) => (
+            <tr key={u._id}>
               <td style={{ padding: 8 }}>{u.name}</td>
               <td style={{ padding: 8 }}>{u.email}</td>
-              <td style={{ padding: 8 }}>{u.createdAt ? new Date(u.createdAt).toLocaleString() : "—"}</td>
+              <td style={{ padding: 8 }}>
+                {u.createdAt ? new Date(u.createdAt).toLocaleString() : "—"}
+              </td>
             </tr>
           ))}
         </tbody>
