@@ -1,38 +1,61 @@
-import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { createContext,  useState, useEffect } from "react";
 import api from "../api/axiosInstance";
+import { getToken, setToken as storageSetToken, removeItem as storageRemoveItem } from "../utils/safeStorage";
 
 const AuthContext = createContext(null);
-export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem("token") || null);
   const [user, setUser] = useState(null);
-  const hasFetched = useRef(false); // ✅ blocks StrictMode double call
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) return;
-    if (hasFetched.current) return; // ✅ skip second StrictMode run
-    hasFetched.current = true;
+    let mounted = true;
 
-    const controller = new AbortController();
+    const loadProfile = async () => {
+      setLoading(true);
 
-    api.get("/api/users/profile", { signal: controller.signal })
-      .then((res) => setUser(res.data.user))
-      .catch((err) => {
-        if (err.name === "CanceledError") return;
-        setToken(null);
-        setUser(null);
-        localStorage.removeItem("token");
-      });
+      if (!token) {
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
 
-    return () => controller.abort(); // ✅ cleanup on unmount
+      // don't set api.defaults headers here; request interceptor reads token from storage
+
+      try {
+        const res = await api.get("/api/users/profile");
+        if (mounted) setUser(res.data.user);
+      } catch (err) {
+        // Only clear token when server explicitly rejects it
+        if (err.response && err.response.status === 401) {
+          if (mounted) {
+              setToken(null);
+              setUser(null);
+              storageRemoveItem("token");
+          }
+        } else {
+          // transient error (network/CORS/timeout) — keep token and let user retry
+          console.error("Failed to fetch profile:", err);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      mounted = false;
+    };
   }, [token]);
 
   const saveToken = (t) => {
-    hasFetched.current = false; // ✅ reset on new login
     setToken(t);
-    if (t) localStorage.setItem("token", t);
-    else localStorage.removeItem("token");
+    if (t) storageSetToken(t);
+    else storageRemoveItem("token");
   };
 
   const register = async (name, email, password) => {
@@ -56,8 +79,24 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Update current user's profile
+  const updateProfile = async (updates) => {
+    const res = await api.put("/api/users/profile", updates);
+    const { user: u } = res.data;
+    setUser(u);
+    return res.data;
+  };
+
+  // Delete current user's account
+  const deleteProfile = async () => {
+    const res = await api.delete("/api/users/profile");
+    // after successful delete, clear local auth
+    logout();
+    return res.data;
+  };
+
   return (
-    <AuthContext.Provider value={{ token, user, register, login, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, register, login, logout, updateProfile, deleteProfile }}>
       {children}
     </AuthContext.Provider>
   );

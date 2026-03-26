@@ -109,3 +109,85 @@ const getAllUsers = async (req, res, next) => {
 };
 
 module.exports = { registerUser, loginUser, getProfile, getAllUsers };
+
+/**
+ * @route  PUT /api/users/profile
+ * @access Private
+ * @description Update the logged-in user's profile (name, email, password)
+ */
+const updateProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    const { name, email, password } = req.body;
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (password) user.password = password; // pre-save hook will hash
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route  DELETE /api/users/profile  (or DELETE /api/users/:id)
+ * @access Private
+ * @description Delete a user. If `:id` provided delete that user, otherwise delete logged-in user.
+ */
+const deleteUser = async (req, res, next) => {
+  try {
+    const targetId = req.params.id || req.user._id;
+    const deleted = await User.findByIdAndDelete(targetId);
+    if (!deleted) return res.status(404).json({ message: "User not found." });
+
+    res.status(200).json({ success: true, message: "User deleted." });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route  PUT /api/users/:id
+ * @access Private
+ * @description Update a user by id (admin-style). Updates name/email/password
+ */
+const updateUserById = async (req, res, next) => {
+  try {
+    const targetId = req.params.id;
+    const user = await User.findById(targetId).select("+password");
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    const { name, email, password } = req.body;
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (password) user.password = password;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { registerUser, loginUser, getProfile, getAllUsers, updateProfile, deleteUser, updateUserById };
