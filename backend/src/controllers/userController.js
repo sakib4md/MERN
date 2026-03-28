@@ -1,4 +1,4 @@
-const User = require("../models/userModel");
+const User = require("../models/UserModel");
 const { generateToken } = require("../utils/jwtUtils");
 
 /**
@@ -111,6 +111,57 @@ const getAllUsers = async (req, res, next) => {
 module.exports = { registerUser, loginUser, getProfile, getAllUsers };
 
 /**
+ * @route  GET /api/users
+ * @access Private
+ * @description Get paginated users list with optional search. Query params: ?page=1&limit=10&search=john
+ */
+const getUsersPaginated = async (req, res, next) => {
+  try {
+    // ✅ sanitize inputs
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50); // max 50
+    const search = (req.query.search || "").toString().trim();
+
+    const skip = (page - 1) * limit;
+
+    // ✅ build query
+    const match = {};
+    if (search) {
+      match.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // ✅ fetch data
+    const users = await User.find(match, "name email createdAt")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // ✅ count total
+    const total = await User.countDocuments(match);
+    const totalPages = Math.ceil(total / limit);
+
+    // ✅ response
+    res.status(200).json({
+      success: true,
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * @route  PUT /api/users/profile
  * @access Private
  * @description Update the logged-in user's profile (name, email, password)
@@ -125,7 +176,7 @@ const updateProfile = async (req, res, next) => {
     if (email) user.email = email;
     if (password) user.password = password; // pre-save hook will hash
 
-    await user.save();
+    await user.save();// updating db
 
     res.status(200).json({
       success: true,
@@ -164,12 +215,14 @@ const deleteUser = async (req, res, next) => {
  * @description Update a user by id (admin-style). Updates name/email/password
  */
 const updateUserById = async (req, res, next) => {
+  console.log("updateUserById called with id:", req.params.id, "and body:", req.body);
   try {
     const targetId = req.params.id;
     const user = await User.findById(targetId).select("+password");
     if (!user) return res.status(404).json({ message: "User not found." });
 
     const { name, email, password } = req.body;
+    console.log("Updating user with:", { name, email, password });
     if (name) user.name = name;
     if (email) user.email = email;
     if (password) user.password = password;
@@ -190,4 +243,4 @@ const updateUserById = async (req, res, next) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getProfile, getAllUsers, updateProfile, deleteUser, updateUserById };
+module.exports = { registerUser, loginUser, getProfile, getAllUsers, getUsersPaginated, updateProfile, deleteUser, updateUserById };

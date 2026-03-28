@@ -1,5 +1,5 @@
 const { verifyToken } = require("../utils/jwtUtils");
-const User = require("../models/userModel");
+const User = require("../models/UserModel");
 
 /**
  * Protect middleware - verifies JWT and attaches user to req

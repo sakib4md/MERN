@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { body } = require("express-validator");
 
-const { registerUser, loginUser, getProfile, getAllUsers, updateProfile, deleteUser, updateUserById } = require("../controllers/userController");
+const { registerUser, loginUser, getProfile, getAllUsers, getUsersPaginated, updateProfile, deleteUser, updateUserById } = require("../controllers/userController");
 const { protect } = require("../middleware/authMiddleware");
 
 // Validation rules
@@ -39,7 +39,8 @@ router.delete("/:id", protect, deleteUser);
 // Returns list of all users (protected)
 router.get("/all", protect, getAllUsers);
 
-
-
+// ===== PAGINATED LISTING =====
+// Paginated users with search: GET /api/users?page=1&limit=10&search=john
+router.get("/", protect, getUsersPaginated);
 
 module.exports = router;
