@@ -8,15 +8,15 @@ const HomePage = () => {
   if (loading) return null;
 
   return (
-    <div style={{ padding: 20 }}>
+    <div className="mx-auto max-w-4xl p-6">
       {user ? (
-        <p>
-          Welcome back, <strong>{user.name}</strong>! 👋
-        </p>
+        <p className="text-lg">Welcome back, <strong>{user.name}</strong>! 👋</p>
       ) : (
-        <p>Welcome — use the links to login or register.</p>
+        <p className="text-lg">Welcome — use the links to login or register.</p>
       )}
-      <ProfilePage />
+      <div className="mt-6">
+        <ProfilePage />
+      </div>
     </div>
   );
 };

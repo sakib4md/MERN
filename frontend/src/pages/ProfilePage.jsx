@@ -20,8 +20,8 @@ const ProfilePage = () => {
     }
   }, [user]);
 
-  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
-  if (!user) return <div style={{ padding: 20 }}>Not logged in.</div>;
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!user) return <div className="p-6">Not logged in.</div>;
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -51,39 +51,39 @@ const ProfilePage = () => {
   };
 
   return (
-    <div style={{ padding: 20, maxWidth: 600 }}>
-      <h2>Profile</h2>
+    <div className="mx-auto max-w-lg p-6 rounded-2xl border border-slate-200 bg-white/90 dark:bg-slate-950/95 dark:border-slate-800">
+      <h2 className="text-2xl font-semibold mb-4 text-slate-900 dark:text-slate-100">Profile</h2>
 
-      <form onSubmit={handleSave}>
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ display: "block", fontWeight: 600 }}>Name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} style={{ width: "100%" }} />
+      <form onSubmit={handleSave} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 bg-white text-slate-900 border-slate-200 focus:ring-2 focus:ring-sky-400/30 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700" />
         </div>
 
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ display: "block", fontWeight: 600 }}>Email</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: "100%" }} />
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 bg-white text-slate-900 border-slate-200 focus:ring-2 focus:ring-sky-400/30 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700" />
         </div>
 
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ display: "block", fontWeight: 600 }}>New password (leave blank to keep)</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: "100%" }} />
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">New password (leave blank to keep)</label>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 bg-white text-slate-900 border-slate-200 focus:ring-2 focus:ring-sky-400/30 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700" />
         </div>
 
         {message && (
-          <div style={{ color: message.type === "error" ? "salmon" : "green", marginBottom: 8 }}>{message.text}</div>
+          <div className={"text-sm " + (message.type === "error" ? 'text-red-500' : 'text-green-600')}>{message.text}</div>
         )}
 
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="submit" disabled={saving}>{saving ? "Saving..." : "Save"}</button>
-          <button type="button" onClick={() => { setName(user.name); setEmail(user.email); setPassword(""); setMessage(null); }}>Reset</button>
-          <button type="button" onClick={() => { logout(); navigate("/"); }}>Logout</button>
-          <button type="button" onClick={handleDelete} style={{ marginLeft: "auto", background: "#c0392b", color: "white" }}>Delete Account</button>
+        <div className="flex items-center gap-3">
+          <button type="submit" disabled={saving} className="btn-soft">{saving ? 'Saving...' : 'Save'}</button>
+          <button type="button" onClick={() => { setName(user.name); setEmail(user.email); setPassword(''); setMessage(null); }} className="btn-soft">Reset</button>
+          <button type="button" onClick={() => { logout(); navigate('/'); }} className="btn-soft">Logout</button>
+          <button type="button" onClick={handleDelete} className="btn-soft ml-auto bg-red-600 text-white hover:bg-red-700">Delete Account</button>
         </div>
       </form>
 
-      <div style={{ marginTop: 16 }}>
-        <small><strong>Account created:</strong> {user.createdAt ? new Date(user.createdAt).toLocaleString() : "—"}</small>
+      <div className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+        <strong>Account created:</strong> {user.createdAt ? new Date(user.createdAt).toLocaleString() : '—'}
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ const connectDB = require("./config/db");
 const loggerMiddleware = require("./middleware/loggerMiddleware");
 const errorHandler = require("./middleware/errorMiddleware");
 const userRoutes = require("./routes/userRoutes");
+const supportRoutes = require("./routes/supportRoutes");
 const morgan = require("morgan");
 
 const app = express();
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/users", userRoutes);
+app.use("/api/support", supportRoutes);
 
 // ================= GLOBAL ERROR HANDLER =================
 // Must be AFTER all routes
