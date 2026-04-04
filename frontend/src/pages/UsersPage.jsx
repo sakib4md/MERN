@@ -2,14 +2,56 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/axiosInstance";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../context/ThemeContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const UsersPage = () => {
   const { token } = useAuth();
   const { theme } = useTheme();
   const [search, setSearch] = useState('');
-const [page, setPage] = useState(1);
+  const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [nameFilter, setNameFilter] = useState('');
+  const [emailFilter, setEmailFilter] = useState('');
+  const [createdFilter, setCreatedFilter] = useState('');
+  const [sortConfig, setSortConfig] = useState({ name: 1, email: 0, createdAt: 0 }); // 1 asc, -1 desc, 0 none
+
+  // Helpers for multi-sort
+  const getSortDir = (field) => sortConfig[field];
+  const getSortString = () => Object.entries(sortConfig).filter(([, dir]) => dir !== 0).map(([field, dir]) => (dir === -1 ? '-' : '') + field).join(',');
+
+  const toggleFieldSort = (field) => {
+    setSortConfig(prev => ({
+      ...prev,
+      [field]: {
+        0: 1,
+        1: -1,
+        '-1': 0
+      }[prev[field]]
+    }));
+    setPage(1);
+  };
+
+  // Persist table state to localStorage
+  const STORAGE_KEY = 'mern-users-table';
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      setPage(saved.page || 1);
+      setLimit(saved.limit || 10);
+      setSearch(saved.search || '');
+      setNameFilter(saved.nameFilter || '');
+      setEmailFilter(saved.emailFilter || '');
+      setCreatedFilter(saved.createdFilter || '');
+      setSortConfig(saved.sortConfig || { name: 1, email: 0, createdAt: 0 });
+    } catch {
+      // ignore corrupt data
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ page, limit, search, nameFilter, emailFilter, createdFilter, sortConfig }));
+  }, [page, limit, search, nameFilter, emailFilter, createdFilter, sortConfig]);
 
   const themeStyles = {
     dark: {
@@ -65,8 +107,10 @@ const [page, setPage] = useState(1);
   const styles = themeStyles[theme];
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["users", { page, search, limit }],
-    queryFn: () => api.get(`/api/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`).then((res) => res.data),
+    queryKey: ["users", { page, search, limit, nameFilter, emailFilter, createdFilter, sortConfig }],
+    queryFn: () => api.get(
+      `/api/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}&name=${encodeURIComponent(nameFilter)}&email=${encodeURIComponent(emailFilter)}&sort=${encodeURIComponent(getSortString())}`
+    ).then((res) => res.data),
     enabled: !!token,
     staleTime: 1000 * 60,
   });
@@ -82,7 +126,8 @@ const [page, setPage] = useState(1);
     setPage(newPage);
   };
 
-if (!token) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Please login to view users.</div>;
+
+  if (!token) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Please login to view users.</div>;
   if (isLoading) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Loading...</div>;
   if (error) return <div style={{ padding: 20, color: 'var(--error)' }}>{error.message}</div>;
 
@@ -90,13 +135,13 @@ if (!token) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Pl
     <div style={{ padding: 20 }}>
       <div style={{ display: "flex", gap: 16, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
         <h2 style={{ margin: 0, flexGrow: 1, color: 'var(--text-primary)' }}>Connected Users ({pagination.total || 0} total)</h2>
-        <div style={{ 
+        <div style={{
           ...styles.container,
-          display: "flex", 
-          gap: 12, 
-          alignItems: "center", 
-          padding: "12px 16px", 
-          borderRadius: 8 
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          padding: "12px 16px",
+          borderRadius: 8
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
@@ -108,9 +153,9 @@ if (!token) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Pl
               placeholder="Search by name or email..."
               value={search}
               onChange={handleSearch}
-              style={{ 
+              style={{
                 ...styles.inputSelect,
-                padding: "10px 12px", 
+                padding: "10px 12px",
                 borderRadius: 6,
                 minWidth: 240,
                 outline: "none",
@@ -134,9 +179,9 @@ if (!token) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Pl
                 setLimit(Number(e.target.value));
                 setPage(1);
               }}
-              style={{ 
+              style={{
                 ...styles.inputSelect,
-                padding: "10px 12px", 
+                padding: "10px 12px",
                 borderRadius: 6,
                 cursor: "pointer",
                 outline: "none",
@@ -163,42 +208,170 @@ if (!token) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Pl
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
           <thead>
             <tr style={{ fontWeight: "bold" }}>
-              <th style={{ 
-                position: "sticky", 
-                top: 0, 
-                ...styles.tableHead,
-                padding: 16, 
-                borderBottom: styles.borderBottom, 
-                textAlign: "left",
-                color: 'var(--text-primary)'
-              }}>Name</th>
-              <th style={{ 
-                position: "sticky", 
-                top: 0, 
-                ...styles.tableHead,
-                padding: 16, 
-                borderBottom: styles.borderBottom, 
-                textAlign: "left",
-                color: 'var(--text-primary)'
-              }}>Email</th>
-              <th style={{ 
-                position: "sticky", 
-                top: 0, 
-                ...styles.tableHead,
-                padding: 16, 
-                borderBottom: styles.borderBottom, 
-                textAlign: "left",
-                color: 'var(--text-primary)'
-              }}>Created</th>
-              <th style={{ 
-                position: "sticky", 
-                top: 0, 
-                ...styles.tableHead,
-                padding: 16, 
-                borderBottom: styles.borderBottom, 
-                textAlign: "left",
-                color: 'var(--text-primary)'
-              }}>Actions</th>
+
+              {/* NAME */}
+              <th
+                onClick={() => toggleFieldSort("name")}
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  ...styles.tableHead,
+                  padding: "12px 16px",
+                  borderBottom: styles.borderBottom,
+                  textAlign: "left",
+                  cursor: "pointer",
+                  color: getSortDir("name") !== 0 ? "var(--accent)" : "var(--text-primary)"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  Name
+                  <span>
+                    {getSortDir("name") === 1 ? "↑" : getSortDir("name") === -1 ? "↓" : "↕️"}
+                  </span>
+                </div>
+              </th>
+
+              {/* EMAIL */}
+              <th
+                onClick={() => toggleFieldSort("email")}
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  ...styles.tableHead,
+                  padding: "12px 16px",
+                  borderBottom: styles.borderBottom,
+                  textAlign: "left",
+                  cursor: "pointer",
+                  color: getSortDir("email") !== 0 ? "var(--accent)" : "var(--text-primary)"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  Email
+                  <span>
+                    {getSortDir("email") === 1 ? "↑" : getSortDir("email") === -1 ? "↓" : "↕️"}
+                  </span>
+                </div>
+              </th>
+
+              {/* CREATED */}
+              <th
+                onClick={() => toggleFieldSort("createdAt")}
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  ...styles.tableHead,
+                  padding: "12px 16px",
+                  borderBottom: styles.borderBottom,
+                  textAlign: "left",
+                  cursor: "pointer",
+                  color: getSortDir("createdAt") !== 0 ? "var(--accent)" : "var(--text-primary)"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  Created
+                  <span>
+                    {getSortDir("createdAt") === 1 ? "↑" : getSortDir("createdAt") === -1 ? "↓" : "↕️"}
+                  </span>
+                </div>
+              </th>
+
+              {/* ACTIONS */}
+              <th
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  ...styles.tableHead,
+                  padding: "12px 16px",
+                  borderBottom: styles.borderBottom,
+                  textAlign: "left"
+                }}
+              >
+                Actions
+              </th>
+
+            </tr>
+            <tr style={{ backgroundColor: styles.tableHead.backgroundColor }}>
+              <th style={{ padding: '8px 16px' }}>
+                <input
+                  placeholder="Filter names..."
+                  value={nameFilter}
+                  onChange={(e) => {
+                    setNameFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={{
+                    ...styles.inputSelect,
+                    padding: '6px 8px',
+                    borderRadius: 4,
+                    width: '100%',
+                    fontSize: '0.85em'
+                  }}
+                />
+              </th>
+              <th style={{ padding: '8px 16px' }}>
+                <input
+                  placeholder="Filter emails..."
+                  value={emailFilter}
+                  onChange={(e) => {
+                    setEmailFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={{
+                    ...styles.inputSelect,
+                    padding: '6px 8px',
+                    borderRadius: 4,
+                    width: '100%',
+                    fontSize: '0.85em'
+                  }}
+                />
+              </th>
+              <th style={{ padding: '8px 16px' }}>
+                <input
+                  placeholder="Filter dates..."
+                  value={createdFilter}
+                  onChange={(e) => {
+                    setCreatedFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={{
+                    ...styles.inputSelect,
+                    padding: '6px 8px',
+                    borderRadius: 4,
+                    width: '100%',
+                    fontSize: '0.85em'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "var(--accent)";
+                    e.target.style.boxShadow = "0 0 0 3px rgba(var(--accent-rgb), 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "var(--border)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                />
+              </th>
+              <th style={{ padding: '8px 16px' }}>
+                <button
+                  onClick={() => {
+                    setNameFilter('');
+                    setEmailFilter('');
+                    setCreatedFilter('');
+                    setSearch('');
+                    setPage(1);
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: 'var(--primary-blue)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    fontSize: '0.85em'
+                  }}
+                >
+                  Clear
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -210,17 +383,17 @@ if (!token) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Pl
       </div>
 
       {pagination.totalPages > 1 && (
-        <div style={{ 
+        <div style={{
           ...styles.paginationContainer,
-          marginTop: 20, 
-          padding: 16, 
-          display: "flex", 
-          justifyContent: "center", 
-          gap: 16, 
-          alignItems: "center" 
+          marginTop: 20,
+          padding: 16,
+          display: "flex",
+          justifyContent: "center",
+          gap: 16,
+          alignItems: "center"
         }}>
-          <PaginationButton 
-            onClick={() => handlePageChange(page - 1)} 
+          <PaginationButton
+            onClick={() => handlePageChange(page - 1)}
             disabled={!pagination.hasPrev}
             children="← Previous"
             theme={theme}
@@ -228,8 +401,8 @@ if (!token) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Pl
           <span style={{ fontWeight: "bold", fontSize: "1.1em", color: 'var(--text-primary)' }}>
             Page <strong>{page}</strong> of <strong>{pagination.totalPages}</strong>
           </span>
-          <PaginationButton 
-            onClick={() => handlePageChange(page + 1)} 
+          <PaginationButton
+            onClick={() => handlePageChange(page + 1)}
             disabled={!pagination.hasNext}
             children="Next →"
             theme={theme}
@@ -242,7 +415,7 @@ if (!token) return <div style={{ padding: 20, color: 'var(--text-primary)' }}>Pl
 
 const PaginationButton = ({ onClick, disabled, children, theme }) => {
   const baseStyle = {
-    padding: "12px 24px", 
+    padding: "12px 24px",
     borderRadius: 8,
     cursor: disabled ? "not-allowed" : "pointer",
     fontWeight: 500,
@@ -256,12 +429,12 @@ const PaginationButton = ({ onClick, disabled, children, theme }) => {
   }
 
   return (
-    <button 
+    <button
       onClick={onClick}
-      style={{ 
+      style={{
         ...baseStyle,
-        border: '1px solid var(--primary-blue)', 
-        backgroundColor: theme === 'light' ? 'linear-gradient(135deg, var(--primary-blue), var(--primary-dark))' : 'var(--primary-blue)', 
+        border: '1px solid var(--primary-blue)',
+        backgroundColor: theme === 'light' ? 'linear-gradient(135deg, var(--primary-blue), var(--primary-dark))' : 'var(--primary-blue)',
         color: 'white',
         boxShadow: '0 4px 12px rgba(0,123,255,0.3)'
       }}
@@ -336,27 +509,27 @@ const UserRow = ({ user, theme }) => {
   };
 
   return (
-    <tr 
+    <tr
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{ 
+      style={{
         backgroundColor: hover ? themeStylesRow.rowHover : "transparent",
         transition: "background-color 0.2s ease"
       }}
     >
       <td style={{ padding: 16, borderBottom: `1px solid ${themeStylesRow.borderBottom}`, verticalAlign: "middle" }}>
         {editing ? (
-          <input 
-            value={name} 
-            onChange={(e) => setName(e.target.value)} 
-            style={{ 
-              width: "100%", 
-              padding: 8, 
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 8,
               backgroundColor: themeStylesRow.editInput,
               color: 'var(--text-primary)',
-              border: `1px solid ${themeStylesRow.editBorder}`, 
-              borderRadius: 4, 
-              boxSizing: "border-box" 
+              border: `1px solid ${themeStylesRow.editBorder}`,
+              borderRadius: 4,
+              boxSizing: "border-box"
             }}
           />
         ) : (
@@ -365,18 +538,18 @@ const UserRow = ({ user, theme }) => {
       </td>
       <td style={{ padding: 16, borderBottom: `1px solid ${themeStylesRow.borderBottom}`, verticalAlign: "middle" }}>
         {editing ? (
-          <input 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            style={{ 
-              width: "100%", 
-              padding: 8, 
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 8,
               backgroundColor: themeStylesRow.editInput,
               color: 'var(--text-primary)',
-              border: `1px solid ${themeStylesRow.editBorder}`, 
-              borderRadius: 4, 
-              boxSizing: "border-box", 
-              fontSize: "0.9em" 
+              border: `1px solid ${themeStylesRow.editBorder}`,
+              borderRadius: 4,
+              boxSizing: "border-box",
+              fontSize: "0.9em"
             }}
           />
         ) : (
@@ -389,8 +562,8 @@ const UserRow = ({ user, theme }) => {
       <td style={{ padding: 16, borderBottom: `1px solid ${themeStylesRow.borderBottom}`, verticalAlign: "middle" }}>
         {editing ? (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button 
-              onClick={handleSave} 
+            <button
+              onClick={handleSave}
               disabled={updateMutation.isPending}
               style={{
                 padding: "8px 16px",
@@ -422,7 +595,7 @@ const UserRow = ({ user, theme }) => {
           </div>
         ) : (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button 
+            <button
               onClick={() => setEditing(true)}
               style={{
                 padding: "8px 16px",

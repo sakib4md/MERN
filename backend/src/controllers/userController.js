@@ -121,11 +121,18 @@ const getUsersPaginated = async (req, res, next) => {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 50); // max 50
     const search = (req.query.search || "").toString().trim();
+    const sortStr = (req.query.sort || "createdAt").toString().trim();
 
     const skip = (page - 1) * limit;
 
     // ✅ build query
     const match = {};
+    const nameFilter = (req.query.name || '').toString().trim();
+    const emailFilter = (req.query.email || '').toString().trim();
+    const createdFilter = (req.query.created || '').toString().trim();
+    if (nameFilter) match.name = { $regex: nameFilter, $options: "i" };
+    if (emailFilter) match.email = { $regex: emailFilter, $options: "i" };
+    if (createdFilter) match.createdAt = { $regex: createdFilter, $options: "i" };
     if (search) {
       match.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -133,9 +140,24 @@ const getUsersPaginated = async (req, res, next) => {
       ];
     }
 
+    // ✅ parse sort
+    const allowedFields = ['name', 'email', 'createdAt'];
+    const sortObj = {};
+    if (sortStr) {
+      sortStr.split(',').forEach(fieldStr => {
+        const field = fieldStr.replace(/^-/, '');
+        if (allowedFields.includes(field)) {
+          sortObj[field] = fieldStr.startsWith('-') ? -1 : 1;
+        }
+      });
+    }
+    if (Object.keys(sortObj).length === 0) {
+      sortObj.name = 1; // default A-Z ascending
+    }
+
     // ✅ fetch data
     const users = await User.find(match, "name email createdAt")
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
       .limit(limit);
 
