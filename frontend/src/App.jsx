@@ -14,7 +14,8 @@ import SettingsPage from "./pages/SettingsPage";
 import SupportPage from "./pages/SupportPage";
 import SupportChat from "./components/SupportForm";
 import AdminPage from "./pages/AdminPage";
-
+import { can } from './utils/roles';
+import RoleRoute from "./components/RoleRoute";
 import { useContext } from "react";
 import AuthContext from "./context/AuthContext";
 
@@ -49,7 +50,7 @@ function Nav() {
             <Link to="/register" className="transition hover:text-sky-300">Register</Link>
             <Link to="/users" className="transition hover:text-sky-300">Users</Link>
             <Link to="/support" className="transition hover:text-sky-300">Support</Link>
-            {user?.isAdmin && <Link to="/admin" className="transition hover:text-sky-300">Admin</Link>}
+            {user && can(user.role, 'viewUsers') && <Link to="/admin" className="transition hover:text-sky-300">Admin</Link>}
           </div>
 
           <div className="text-xl font-bold text-slate-900 dark:text-slate-100 hidden sm:block">
@@ -111,30 +112,21 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/users"
-            element={
-              <ProtectedRoute>
-                <UsersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/support"
-            element={
-              <ProtectedRoute>
-                <SupportPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/users" element={
+            <RoleRoute minRole="viewer">
+              <UsersPage />
+            </RoleRoute>
+          } />
+          <Route path="/support" element={
+            <RoleRoute minRole="viewer">
+              <SupportPage />
+            </RoleRoute>
+          } />
+          <Route path="/admin" element={
+            <RoleRoute minRole="admin">
+              <AdminPage />
+            </RoleRoute>
+          } />
         </Routes>
       </main>
 

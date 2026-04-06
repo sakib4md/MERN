@@ -1,275 +1,133 @@
 const User = require("../models/UserModel");
 const { generateToken } = require("../utils/jwtUtils");
 
-/**
- * @route  POST /api/users/register
- * @access Public
- */
 const registerUser = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
-
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already registered." });
-    }
-
-    // Create user (password is hashed in model pre-save hook)
+    if (existingUser) return res.status(400).json({ message: "Email already registered." });
     const user = await User.create({ name, email, password });
-
-    // Generate JWT
     const token = generateToken({ id: user._id, email: user.email });
-
     res.status(201).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        createdAt: user.createdAt,
-      },
+      success: true, token,
+      user: { id: user._id, name: user.name, email: user.email, createdAt: user.createdAt },
     });
-  } catch (err) {
-    next(err); // passes to global error handler
-  }
+  } catch (err) { next(err); }
 };
 
-/**
- * @route  POST /api/users/login
- * @access Public
- */
 const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
-    // Find user and include password (select: false by default in model)
     const user = await User.findOne({ email }).select("+password");
-    if (!user) {
-      return res.status(401).json({ message: "Invalid email or password." });
-    }
-
-    // Compare password
+    if (!user) return res.status(401).json({ message: "Invalid email or password." });
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid email or password." });
-    }
-
-    // Generate JWT
+    if (!isMatch) return res.status(401).json({ message: "Invalid email or password." });
     const token = generateToken({ id: user._id, email: user.email });
-
     res.status(200).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+      success: true, token,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
-/**
- * @route  GET /api/users/profile
- * @access Private (requires JWT)
- */
 const getProfile = async (req, res, next) => {
   try {
-    // req.user is attached by the protect middleware
-    console.log(`🔐 Login: ${req.user.email} | Role: ${req.user.role || 'viewer'} | Admin: ${req.user.role === 'admin'}`);
     res.status(200).json({
       success: true,
       user: {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        role: req.user.role || 'viewer',
+        id: req.user._id, name: req.user.name,
+        email: req.user.email, role: req.user.role,
         createdAt: req.user.createdAt,
       },
     });
-
-
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
-/**
- * @route  GET /api/users/all
- * @access Private (requires JWT)
- * Returns a list of all users with basic info
- */
 const getAllUsers = async (req, res, next) => {
   try {
-    const users = await User.find({}, "name email createdAt").sort({ createdAt: -1 });
+    const users = await User.find({}, "name email createdAt role").sort({ createdAt: -1 });
     res.status(200).json({ success: true, users });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
-module.exports = { registerUser, loginUser, getProfile, getAllUsers };
-
-/**
- * @route  GET /api/users
- * @access Private
- * @description Get paginated users list with optional search. Query params: ?page=1&limit=10&search=john
- */
 const getUsersPaginated = async (req, res, next) => {
   try {
-    // ✅ sanitize inputs
-    const page = Math.max(parseInt(req.query.page) || 1, 1);
-    const limit = Math.min(parseInt(req.query.limit) || 10, 50); // max 50
-    const search = (req.query.search || "").toString().trim();
-    const sortStr = (req.query.sort || "createdAt").toString().trim();
+    const page    = Math.max(parseInt(req.query.page)  || 1, 1);
+    const limit   = Math.min(parseInt(req.query.limit) || 10, 50);
+    const search  = (req.query.search || "").toString().trim();
+    const sortStr = (req.query.sort   || "createdAt").toString().trim();
+    const skip    = (page - 1) * limit;
 
-    const skip = (page - 1) * limit;
-
-    // ✅ build query
     const match = {};
-    const nameFilter = (req.query.name || '').toString().trim();
-    const emailFilter = (req.query.email || '').toString().trim();
-    const createdFilter = (req.query.created || '').toString().trim();
-    if (nameFilter) match.name = { $regex: nameFilter, $options: "i" };
-    if (emailFilter) match.email = { $regex: emailFilter, $options: "i" };
-    if (createdFilter) match.createdAt = { $regex: createdFilter, $options: "i" };
-    if (search) {
-      match.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ];
-    }
+    if (search) match.$or = [
+      { name:  { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+    ];
 
-    // ✅ parse sort
-    const allowedFields = ['name', 'email', 'createdAt'];
+    const allowedFields = ["name", "email", "createdAt"];
     const sortObj = {};
-    if (sortStr) {
-      sortStr.split(',').forEach(fieldStr => {
-        const field = fieldStr.replace(/^-/, '');
-        if (allowedFields.includes(field)) {
-          sortObj[field] = fieldStr.startsWith('-') ? -1 : 1;
-        }
-      });
-    }
-    if (Object.keys(sortObj).length === 0) {
-      sortObj.name = 1; // default A-Z ascending
-    }
+    sortStr.split(",").forEach(f => {
+      const field = f.replace(/^-/, "");
+      if (allowedFields.includes(field)) sortObj[field] = f.startsWith("-") ? -1 : 1;
+    });
+    if (!Object.keys(sortObj).length) sortObj.name = 1;
 
-    // ✅ fetch data
-    const users = await User.find(match, "name email role createdAt status")
-      .sort(sortObj)
-      .skip(skip)
-      .limit(limit);
-
-
-    // ✅ count total
-    const total = await User.countDocuments(match);
+    const users      = await User.find(match, "name email role createdAt status").sort(sortObj).skip(skip).limit(limit);
+    const total      = await User.countDocuments(match);
     const totalPages = Math.ceil(total / limit);
 
-    // ✅ response
     res.status(200).json({
-      success: true,
-      users,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
-      },
+      success: true, users,
+      pagination: { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
     });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
-/**
- * @route  PUT /api/users/profile
- * @access Private
- * @description Update the logged-in user's profile (name, email, password)
- */
+// FIX: role is intentionally NOT accepted — users cannot self-elevate
 const updateProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select("+password");
     if (!user) return res.status(404).json({ message: "User not found." });
-
-    const { name, email, password, role } = req.body;
-    if (name) user.name = name;
-    if (email) user.email = email;
+    const { name, email, password } = req.body;
+    if (name)     user.name     = name;
+    if (email)    user.email    = email;
     if (password) user.password = password;
-    if (role) user.role = role;
-
     await user.save();
-
-
     res.status(200).json({
       success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        createdAt: user.createdAt,
-      },
+      user: { id: user._id, name: user.name, email: user.email, createdAt: user.createdAt },
     });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
-/**
- * @route  DELETE /api/users/profile  (or DELETE /api/users/:id)
- * @access Private
- * @description Delete a user. If `:id` provided delete that user, otherwise delete logged-in user.
- */
 const deleteUser = async (req, res, next) => {
   try {
     const targetId = req.params.id || req.user._id;
-    const deleted = await User.findByIdAndDelete(targetId);
+    const deleted  = await User.findByIdAndDelete(targetId);
     if (!deleted) return res.status(404).json({ message: "User not found." });
-
     res.status(200).json({ success: true, message: "User deleted." });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
-/**
- * @route  PUT /api/users/:id
- * @access Private
- * @description Update a user by id (admin-style). Updates name/email/password
- */
+// role IS accepted here — admin-only route
 const updateUserById = async (req, res, next) => {
-  console.log("updateUserById called with id:", req.params.id, "and body:", req.body);
   try {
-    const targetId = req.params.id;
-    const user = await User.findById(targetId).select("+password");
+    const user = await User.findById(req.params.id).select("+password");
     if (!user) return res.status(404).json({ message: "User not found." });
-
-    const { name, email, password } = req.body;
-    console.log("Updating user with:", { name, email, password });
-    if (name) user.name = name;
-    if (email) user.email = email;
+    const { name, email, password, role } = req.body;
+    if (name)     user.name     = name;
+    if (email)    user.email    = email;
     if (password) user.password = password;
-
+    if (role)     user.role     = role;
     await user.save();
-
     res.status(200).json({
       success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        createdAt: user.createdAt,
-      },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
-module.exports = { registerUser, loginUser, getProfile, getAllUsers, getUsersPaginated, updateProfile, deleteUser, updateUserById };
+module.exports = {
+  registerUser, loginUser, getProfile, getAllUsers,
+  getUsersPaginated, updateProfile, deleteUser, updateUserById,
+};
