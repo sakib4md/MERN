@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import api from "../api/axiosInstance";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../context/ThemeContext";
+import roles, { roleColors, can } from "../utils/roles";
+import UserActions from "../components/UserActions";
 import { useState, useEffect, useMemo } from "react";
+
 
 const UsersPage = () => {
   const { token } = useAuth();
@@ -65,7 +68,8 @@ const UsersPage = () => {
   const { users = [], pagination = {} } = data || {};
 
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', email: '' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', role: '' });
+
 
   const cards = useMemo(
     () =>
@@ -184,11 +188,13 @@ const UsersPage = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email
                   <button onClick={() => toggleFieldSort('email')} className="ml-2 text-xs">{sortConfig.email === 1 ? '▲' : sortConfig.email === -1 ? '▼' : '⇅'}</button>
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Created
                   <button onClick={() => toggleFieldSort('createdAt')} className="ml-2 text-xs">{sortConfig.createdAt === 1 ? '▲' : sortConfig.createdAt === -1 ? '▼' : '⇅'}</button>
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-transparent divide-y divide-slate-100 dark:divide-slate-800">
@@ -206,82 +212,52 @@ const UsersPage = () => {
                   <tr key={user._id} className="hover:bg-slate-50 dark:hover:bg-slate-900/80">
                     <td className="px-4 py-3">
                       {editingId === user._id ? (
-                          <input
-                            value={editForm.name}
-                            onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))}
-                            className="w-full rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
-                          />
+                        <><input
+                          value={editForm.name}
+                          onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))}
+                          className="w-full rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700" /><select
+                            value={editForm.role}
+                            onChange={(e) => setEditForm((s) => ({ ...s, role: e.target.value }))}
+                            className="ml-2 rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
+                          >
+                            {roles.getRoleOptions().map(({ value, label }) => (
+                              <option key={value} value={value}>{label}111</option>
+                            ))}
+                          </select></>
+
                       ) : (
-                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{user.name}</div>
+                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{user.name}--2</div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                       {editingId === user._id ? (
-                          <input
-                            value={editForm.email}
-                            onChange={(e) => setEditForm((s) => ({ ...s, email: e.target.value }))}
-                            className="w-full rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
-                          />
+                        <input
+                          value={editForm.email}
+                          onChange={(e) => setEditForm((s) => ({ ...s, email: e.target.value }))}
+                          className="w-full rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
+                        />
                       ) : (
-                        user.email
+                        <div className="text-sm font-medium text-slate-900 dark:text-slate-10">{user.email}--2</div>
+
                       )}
                     </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${roleColors[user.role] || 'bg-slate-400 text-slate-900'}`}>
+                        {user.role?.toUpperCase() || 'VIEWER'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{user.status || 'active'}</td>
+
                     <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
-                      {editingId === user._id ? (
-                        <>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await api.put(`/api/users/${user._id}`, { name: editForm.name.trim(), email: editForm.email.trim() });
-                                setEditingId(null);
-                                await refetch();
-                              } catch (err) {
-                                alert(err?.response?.data?.message || err.message || 'Update failed');
-                              }
-                            }}
-                            className="btn-soft"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingId(null);
-                            }}
-                            className="btn-soft"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => {
-                              setEditingId(user._id);
-                              setEditForm({ name: user.name || '', email: user.email || '' });
-                            }}
-                            className="btn-soft"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (!window.confirm('Delete this user? This cannot be undone.')) return;
-                              try {
-                                await api.delete(`/api/users/${user._id}`);
-                                await refetch();
-                                alert('User deleted');
-                              } catch (err) {
-                                alert(err?.response?.data?.message || err.message || 'Delete failed');
-                              }
-                            }}
-                            className="btn-soft bg-red-50 text-red-700 hover:bg-red-100"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
+                      <UserActions
+                        user={user}
+                        editingId={editingId}
+                        setEditingId={setEditingId}
+                        editForm={editForm}
+                        setEditForm={setEditForm}
+                        refetch={refetch}
+                      />
                     </td>
                   </tr>
                 ))}

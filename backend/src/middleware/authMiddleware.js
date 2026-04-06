@@ -20,14 +20,15 @@ const protect = async (req, res, next) => {
     const decoded = verifyToken(token);
 
     // 3. Find user from decoded token (exclude password)
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).select('-password');
     if (!user) {
       return res.status(401).json({ message: "User no longer exists." });
     }
 
-    // 4. Attach user to request
+    // 4. Attach user to request (include role)
     req.user = user;
     next();
+
   } catch (err) {
     return res.status(401).json({ message: "Not authorized. Invalid token." });
   }

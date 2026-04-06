@@ -80,15 +80,19 @@ const loginUser = async (req, res, next) => {
 const getProfile = async (req, res, next) => {
   try {
     // req.user is attached by the protect middleware
+    console.log(`🔐 Login: ${req.user.email} | Role: ${req.user.role || 'viewer'} | Admin: ${req.user.role === 'admin'}`);
     res.status(200).json({
       success: true,
       user: {
         id: req.user._id,
         name: req.user.name,
         email: req.user.email,
+        role: req.user.role || 'viewer',
         createdAt: req.user.createdAt,
       },
     });
+
+
   } catch (err) {
     next(err);
   }
@@ -156,10 +160,11 @@ const getUsersPaginated = async (req, res, next) => {
     }
 
     // ✅ fetch data
-    const users = await User.find(match, "name email createdAt")
+    const users = await User.find(match, "name email role createdAt status")
       .sort(sortObj)
       .skip(skip)
       .limit(limit);
+
 
     // ✅ count total
     const total = await User.countDocuments(match);
@@ -193,12 +198,14 @@ const updateProfile = async (req, res, next) => {
     const user = await User.findById(req.user._id).select("+password");
     if (!user) return res.status(404).json({ message: "User not found." });
 
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
     if (name) user.name = name;
     if (email) user.email = email;
-    if (password) user.password = password; // pre-save hook will hash
+    if (password) user.password = password;
+    if (role) user.role = role;
 
-    await user.save();// updating db
+    await user.save();
+
 
     res.status(200).json({
       success: true,

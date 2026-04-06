@@ -4,6 +4,7 @@ const { body } = require("express-validator");
 
 const { registerUser, loginUser, getProfile, getAllUsers, getUsersPaginated, updateProfile, deleteUser, updateUserById } = require("../controllers/userController");
 const { protect } = require("../middleware/authMiddleware");
+const adminOnly = require("../middleware/adminMiddleware");
 
 // Validation rules
 const registerValidation = [
@@ -31,13 +32,13 @@ router.put("/profile", protect, updateProfile);
 // Delete logged-in user's profile
 router.delete("/profile", protect, deleteUser);
 
-// Admin/update/delete by id (protected)
-router.put("/:id", protect, updateUserById);
-router.delete("/:id", protect, deleteUser);
+// Admin/update/delete by id (admin only)
+router.put("/:id", protect, adminOnly, updateUserById);
+router.delete("/:id", protect, adminOnly, deleteUser);
 
 // ===== ADMIN / LISTING =====
-// Returns list of all users (protected)
-router.get("/all", protect, getAllUsers);
+// Returns list of all users (admin only)
+router.get("/all", protect, adminOnly, getAllUsers);
 
 // ===== PAGINATED LISTING =====
 // Paginated users with search: GET /api/users?page=1&limit=10&search=john
