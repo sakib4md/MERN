@@ -6,7 +6,6 @@ import { useAuth } from '../hooks/useAuth';
 
 const UserActions = ({ user, editingId, setEditingId, editForm, setEditForm, refetch }) => {
   const { user: currentUser } = useAuth();
-  console.log(can(currentUser?.role, 'editUsers'), 'editUsers permission for role:', currentUser?.role);
   const handleEdit = () => {
     setEditingId(user._id);
     setEditForm({ name: user.name || '', email: user.email || '', role: user.role || 'viewer' });

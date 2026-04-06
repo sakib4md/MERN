@@ -70,6 +70,15 @@ const UsersPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', role: '' });
 
+  // Reset editing state whenever the current user's role changes (e.g. switched to viewer)
+  useEffect(() => {
+    if (!can(currentUser?.role, 'editUsers')) {
+      setEditingId(null);
+      setEditForm({ name: '', email: '', role: '' });
+    }
+  }, [currentUser?.role]);
+
+  const canEdit = can(currentUser?.role, 'editUsers');
 
   const cards = useMemo(
     () =>
@@ -193,7 +202,7 @@ const UsersPage = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Created
                   <button onClick={() => toggleFieldSort('createdAt')} className="ml-2 text-xs">{sortConfig.createdAt === 1 ? '▲' : sortConfig.createdAt === -1 ? '▼' : '⇅'}</button>
                 </th>
-                {can(currentUser?.role, 'editUsers') && (
+                {canEdit && (
                   <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                 )}
 
@@ -201,23 +210,27 @@ const UsersPage = () => {
             </thead>
             <tbody className="bg-white dark:bg-transparent divide-y divide-slate-100 dark:divide-slate-800">
               {isLoading && users.length === 0
-                ? Array.from({ length: can(currentUser?.role, 'editUsers') ? limit : limit }).map((_, i) => (
+                ? Array.from({ length: canEdit ? limit : limit }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     <td className="px-4 py-4">&nbsp;</td>
                     <td className="px-4 py-4">&nbsp;</td>
                     <td className="px-4 py-4">&nbsp;</td>
                     <td className="px-4 py-4">&nbsp;</td>
-                    {!can(currentUser?.role, 'editUsers') ? <td className="px-4 py-4">&nbsp;</td> : <td className="px-4 py-4 text-right">&nbsp;</td>}
+                    {!canEdit ? <td className="px-4 py-4">&nbsp;</td> : <td className="px-4 py-4 text-right">&nbsp;</td>}
                   </tr>
                 ))
                 : users.map((user) => (
                   <tr key={user._id} className="hover:bg-slate-50 dark:hover:bg-slate-900/80">
                     <td className="px-4 py-3">
-                      {editingId === user._id ? (
-                        <><input
-                          value={editForm.name}
-                          onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))}
-                          className="w-full rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700" /><select
+                      {/* Only render inputs when the current user actually has edit permission */}
+                      {canEdit && editingId === user._id ? (
+                        <>
+                          <input
+                            value={editForm.name}
+                            onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))}
+                            className="w-full rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
+                          />
+                          <select
                             value={editForm.role}
                             onChange={(e) => setEditForm((s) => ({ ...s, role: e.target.value }))}
                             className="ml-2 rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
@@ -225,22 +238,21 @@ const UsersPage = () => {
                             {roles.getRoleOptions().map(({ value, label }) => (
                               <option key={value} value={value}>{label}</option>
                             ))}
-                          </select></>
-
+                          </select>
+                        </>
                       ) : (
-                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{user.name}--2</div>
+                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{user.name}</div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
-                      {editingId === user._id ? (
+                      {canEdit && editingId === user._id ? (
                         <input
                           value={editForm.email}
                           onChange={(e) => setEditForm((s) => ({ ...s, email: e.target.value }))}
                           className="w-full rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
                         />
                       ) : (
-                        <div className="text-sm font-medium text-slate-900 dark:text-slate-10">{user.email}--2</div>
-
+                        <div className="text-sm font-medium text-slate-900 dark:text-slate-10">{user.email}</div>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -251,7 +263,7 @@ const UsersPage = () => {
                     <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{user.status || 'active'}</td>
 
                     <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{new Date(user.createdAt).toLocaleDateString()}</td>
-                    {can(currentUser?.role, 'editUsers') && (
+                    {canEdit && (
                       <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
                         <UserActions
                           user={user}
