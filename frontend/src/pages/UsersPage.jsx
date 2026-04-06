@@ -8,7 +8,7 @@ import { useState, useEffect, useMemo } from "react";
 
 
 const UsersPage = () => {
-  const { token } = useAuth();
+  const { user: currentUser, token } = useAuth();
   const { theme } = useTheme();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -16,7 +16,7 @@ const UsersPage = () => {
   const [sortConfig, setSortConfig] = useState({ name: 1, email: 0, createdAt: 0 });
 
   const STORAGE_KEY = 'mern-users-table';
-
+  console.log(token, theme, search, page, limit, sortConfig, roles);
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -193,19 +193,21 @@ const UsersPage = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Created
                   <button onClick={() => toggleFieldSort('createdAt')} className="ml-2 text-xs">{sortConfig.createdAt === 1 ? '▲' : sortConfig.createdAt === -1 ? '▼' : '⇅'}</button>
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                {can(currentUser?.role, 'editUsers') && (
+                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                )}
 
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-transparent divide-y divide-slate-100 dark:divide-slate-800">
               {isLoading && users.length === 0
-                ? Array.from({ length: limit }).map((_, i) => (
+                ? Array.from({ length: can(currentUser?.role, 'editUsers') ? limit : limit }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     <td className="px-4 py-4">&nbsp;</td>
                     <td className="px-4 py-4">&nbsp;</td>
                     <td className="px-4 py-4">&nbsp;</td>
                     <td className="px-4 py-4">&nbsp;</td>
-                    <td className="px-4 py-4 text-right">&nbsp;</td>
+                    {!can(currentUser?.role, 'editUsers') ? <td className="px-4 py-4">&nbsp;</td> : <td className="px-4 py-4 text-right">&nbsp;</td>}
                   </tr>
                 ))
                 : users.map((user) => (
@@ -221,7 +223,7 @@ const UsersPage = () => {
                             className="ml-2 rounded-md border px-2 py-1 text-sm bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/40 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
                           >
                             {roles.getRoleOptions().map(({ value, label }) => (
-                              <option key={value} value={value}>{label}111</option>
+                              <option key={value} value={value}>{label}</option>
                             ))}
                           </select></>
 
@@ -249,16 +251,18 @@ const UsersPage = () => {
                     <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{user.status || 'active'}</td>
 
                     <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{new Date(user.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
-                      <UserActions
-                        user={user}
-                        editingId={editingId}
-                        setEditingId={setEditingId}
-                        editForm={editForm}
-                        setEditForm={setEditForm}
-                        refetch={refetch}
-                      />
-                    </td>
+                    {can(currentUser?.role, 'editUsers') && (
+                      <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
+                        <UserActions
+                          user={user}
+                          editingId={editingId}
+                          setEditingId={setEditingId}
+                          editForm={editForm}
+                          setEditForm={setEditForm}
+                          refetch={refetch}
+                        />
+                      </td>
+                    )}
                   </tr>
                 ))}
             </tbody>

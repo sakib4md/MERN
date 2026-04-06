@@ -20,7 +20,7 @@ import RoleRoute      from "./components/RoleRoute";
 // ── header title map ──────────────────────────────────────────────────────
 const HEADER_TITLES = {
   admin:     "Admin Dashboard",
-  cs:        "Manager Dashboard",
+  cs:        "Customer Support",
   moderator: "Moderator Dashboard",
   editor:    "Editor Dashboard",
   viewer:    "User Dashboard",

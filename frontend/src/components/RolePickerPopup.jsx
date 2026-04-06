@@ -16,7 +16,7 @@ const ROLES = [
   },
   {
     value: "cs",
-    label: "Manager",
+    label: "Customer Support",
     desc: "All user actions & support",
     icon: "◈",
     color: "emerald",
@@ -52,7 +52,7 @@ const ROLES = [
   },
   {
     value: "viewer",
-    label: "User",
+    label: "viewer",
     desc: "View only access",
     icon: "○",
     color: "slate",
@@ -78,7 +78,8 @@ const RolePickerPopup = ({ onClose }) => {
     try {
       await updateProfile({ role: selected });
       setSaved(true);
-      setTimeout(() => { setSaved(false); onClose(); }, 900);
+
+      onClose();
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to update role.");
       setSaving(false);

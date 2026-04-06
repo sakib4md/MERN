@@ -16,7 +16,7 @@ const SettingsPage = () => {
     [ROLES.VIEWER]: 'User',
     [ROLES.EDITOR]: 'Editor',
     [ROLES.MODERATOR]: 'Moderator',
-    [ROLES.CS]: 'Manager',
+    [ROLES.CS]: 'Customer Support',
     [ROLES.ADMIN]: 'Admin'
   };
 
@@ -128,7 +128,7 @@ const SettingsPage = () => {
         <div className="rounded-[24px] border border-slate-200/80 bg-white/90 p-8 shadow-soft dark:border-slate-800 dark:bg-slate-950/95">
           <h2 className="text-xl font-semibold mb-6 text-slate-900 dark:text-slate-100">Permissions Matrix</h2>
           <p className="text-sm text-slate-500 mb-4 dark:text-slate-400">
-            Admin: Full access • Manager: All user actions • Moderator: View/edit/delete • Editor: View/edit • User: View only
+            Admin: Full access • Customer Support: All user actions • Moderator: View/edit/delete • Editor: View/edit • User: View only
           </p>
           <div className="overflow-x-auto">
             <table className="min-w-full">
@@ -142,7 +142,7 @@ const SettingsPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries({ ADMIN: ROLES.ADMIN, MANAGER: ROLES.CS, MODERATOR: ROLES.MODERATOR, EDITOR: ROLES.EDITOR, USER: ROLES.VIEWER }).map(([roleKey, roleValue]) => (
+                {Object.entries({ ADMIN: ROLES.ADMIN, CS: ROLES.CS, MODERATOR: ROLES.MODERATOR, EDITOR: ROLES.EDITOR, USER: ROLES.VIEWER }).map(([roleKey, roleValue]) => (
                   <tr key={roleValue} className="border-t">
                     <td className="py-3 px-4 font-semibold">{roleKey}</td>
                     <td className={`py-3 px-4 ${can(roleValue, 'viewUsers') ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>

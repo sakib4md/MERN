@@ -29,7 +29,7 @@ export const can = (userRole, permission) => {
 };
 
 export const getRoleOptions = () => [
-  { value: ROLES.VIEWER, label: 'Viewer' },
+  { value: ROLES.VIEWER, label: 'Viewer1111222' },
   { value: ROLES.EDITOR, label: 'Editor' },
   { value: ROLES.MODERATOR, label: 'Moderator' },
   { value: ROLES.CS, label: 'Customer Support' },

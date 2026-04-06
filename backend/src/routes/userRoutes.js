@@ -20,16 +20,16 @@ const loginValidation = [
 ];
 
 router.post("/register", registerValidation, registerUser);
-router.post("/login",    loginValidation,    loginUser);
-router.get("/login",    (_, res) => res.status(405).json({ message: "Use POST /api/users/login" }));
+router.post("/login", loginValidation, loginUser);
+router.get("/login", (_, res) => res.status(405).json({ message: "Use POST /api/users/login" }));
 router.get("/register", (_, res) => res.status(405).json({ message: "Use POST /api/users/register" }));
 
-router.get("/profile",    protect, getProfile);
-router.put("/profile",    protect, updateProfile);
+router.get("/profile", protect, getProfile);
+router.put("/profile", protect, updateProfile);
 router.delete("/profile", protect, deleteUser);
 
-router.get("/all",    protect, requireRole("admin"), getAllUsers);
-router.put("/:id",    protect, requireRole("admin"), updateUserById);
+router.get("/all", protect, requireRole("admin"), getAllUsers);
+router.put("/:id", protect, requireMinRole("moderator"), updateUserById);
 router.delete("/:id", protect, requireRole("admin"), deleteUser);
 
 router.get("/", protect, requireMinRole("viewer"), getUsersPaginated);
