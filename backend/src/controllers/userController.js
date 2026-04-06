@@ -10,7 +10,7 @@ const registerUser = async (req, res, next) => {
     const token = generateToken({ id: user._id, email: user.email });
     res.status(201).json({
       success: true, token,
-      user: { id: user._id, name: user.name, email: user.email, createdAt: user.createdAt },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt },
     });
   } catch (err) { next(err); }
 };
@@ -57,13 +57,11 @@ const getUsersPaginated = async (req, res, next) => {
     const search  = (req.query.search || "").toString().trim();
     const sortStr = (req.query.sort   || "createdAt").toString().trim();
     const skip    = (page - 1) * limit;
-
-    const match = {};
+    const match   = {};
     if (search) match.$or = [
       { name:  { $regex: search, $options: "i" } },
       { email: { $regex: search, $options: "i" } },
     ];
-
     const allowedFields = ["name", "email", "createdAt"];
     const sortObj = {};
     sortStr.split(",").forEach(f => {
@@ -71,11 +69,9 @@ const getUsersPaginated = async (req, res, next) => {
       if (allowedFields.includes(field)) sortObj[field] = f.startsWith("-") ? -1 : 1;
     });
     if (!Object.keys(sortObj).length) sortObj.name = 1;
-
     const users      = await User.find(match, "name email role createdAt status").sort(sortObj).skip(skip).limit(limit);
     const total      = await User.countDocuments(match);
     const totalPages = Math.ceil(total / limit);
-
     res.status(200).json({
       success: true, users,
       pagination: { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
@@ -83,19 +79,30 @@ const getUsersPaginated = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// FIX: role is intentionally NOT accepted — users cannot self-elevate
+/**
+ * PUT /api/users/profile
+ * Allows user to update name, email, password.
+ * Role is ALSO accepted here intentionally — this app uses a role-switcher
+ * for demo/testing. The valid enum values are enforced by the Mongoose model.
+ */
 const updateProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select("+password");
     if (!user) return res.status(404).json({ message: "User not found." });
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
     if (name)     user.name     = name;
     if (email)    user.email    = email;
     if (password) user.password = password;
+    // role: accepted so the Settings role-picker works
+    if (role)     user.role     = role;
     await user.save();
     res.status(200).json({
       success: true,
-      user: { id: user._id, name: user.name, email: user.email, createdAt: user.createdAt },
+      user: {
+        id: user._id, name: user.name,
+        email: user.email, role: user.role,   // ← role included in response
+        createdAt: user.createdAt,
+      },
     });
   } catch (err) { next(err); }
 };
@@ -109,7 +116,6 @@ const deleteUser = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// role IS accepted here — admin-only route
 const updateUserById = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select("+password");
