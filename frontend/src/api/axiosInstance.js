@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getToken } from "../utils/safeStorage";
 
-const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const baseURL = import.meta.env.VITE_API_URL || "https://mern-baa0.onrender.com";
 
 // timeout: 30s to avoid spurious 10s aborts during slow networks
 const api = axios.create({ baseURL, timeout: 30000 });
