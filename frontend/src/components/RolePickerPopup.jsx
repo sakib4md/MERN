@@ -72,13 +72,15 @@ const RolePickerPopup = ({ onClose }) => {
   const [error, setError] = useState(null);
 
   const handleSave = async () => {
-    if (selected === user?.role) { onClose(); return; }
+    if (selected === user?.role) {
+      onClose();
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await updateProfile({ role: selected });
       setSaved(true);
-
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to update role.");
@@ -87,26 +89,34 @@ const RolePickerPopup = ({ onClose }) => {
   };
 
   return (
-    <>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto">
       {/* backdrop */}
       <div
         className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* popup card */}
+      {/* popup */}
       <div
-        className="fixed top-20 right-4 z-50 w-80 rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+        className="
+          fixed top-20 right-4 z-50 w-80
+          max-h-[80vh] flex flex-col
+          rounded-3xl border border-slate-200/80
+          bg-white shadow-2xl
+          dark:border-slate-700 dark:bg-slate-900
+        "
         style={{ animation: "popIn .15s ease-out" }}
       >
-        {/* header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+        {/* HEADER (NO SCROLL) */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 shrink-0 dark:border-slate-800">
           <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Switch Role</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Switch Role
+            </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Current:&nbsp;
               <span className="font-semibold capitalize text-slate-700 dark:text-slate-200">
-                {ROLES.find(r => r.value === user?.role)?.label || "User"}
+                {ROLES.find((r) => r.value === user?.role)?.label || "User"}
               </span>
             </p>
           </div>
@@ -118,8 +128,8 @@ const RolePickerPopup = ({ onClose }) => {
           </button>
         </div>
 
-        {/* role cards */}
-        <ul className="space-y-1.5 p-3">
+        {/* SCROLLABLE ROLE LIST */}
+        <ul className="flex-1 overflow-y-auto space-y-1.5 p-3">
           {ROLES.map((r) => {
             const isActive = selected === r.value;
             return (
@@ -127,25 +137,31 @@ const RolePickerPopup = ({ onClose }) => {
                 <button
                   onClick={() => setSelected(r.value)}
                   className={`w-full flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all duration-150
-                    ${isActive
-                      ? `${r.bg} ${r.border} ring-2 ${r.ring}`
-                      : "border-transparent bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800"}
-                  `}
+                    ${
+                      isActive
+                        ? `${r.bg} ${r.border} ring-2 ${r.ring}`
+                        : "border-transparent bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                    }`}
                 >
-                  {/* icon */}
-                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg font-bold ${r.badge}`}>
+                  <span
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold ${r.badge}`}
+                  >
                     {r.icon}
                   </span>
 
-                  {/* labels */}
-                  <span className="min-w-0 flex-1">
-                    <span className={`block text-sm font-semibold ${isActive ? r.text : "text-slate-800 dark:text-slate-100"}`}>
+                  <span className="flex-1 min-w-0">
+                    <span
+                      className={`block text-sm font-semibold ${
+                        isActive ? r.text : "text-slate-800 dark:text-slate-100"
+                      }`}
+                    >
                       {r.label}
                     </span>
-                    <span className="block text-xs text-slate-500 dark:text-slate-400">{r.desc}</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400">
+                      {r.desc}
+                    </span>
                   </span>
 
-                  {/* check */}
                   {isActive && (
                     <span className={`text-base font-bold ${r.text}`}>✓</span>
                   )}
@@ -155,8 +171,8 @@ const RolePickerPopup = ({ onClose }) => {
           })}
         </ul>
 
-        {/* footer */}
-        <div className="border-t border-slate-100 px-4 pb-4 pt-3 dark:border-slate-800">
+        {/* FOOTER (ALWAYS VISIBLE) */}
+        <div className="border-t border-slate-100 px-4 pb-4 pt-3 shrink-0 dark:border-slate-800">
           {error && (
             <p className="mb-2 text-center text-xs text-red-500">{error}</p>
           )}
@@ -165,6 +181,7 @@ const RolePickerPopup = ({ onClose }) => {
               ✓ Role updated successfully!
             </p>
           )}
+
           <div className="flex gap-2">
             <button
               onClick={onClose}
@@ -172,6 +189,7 @@ const RolePickerPopup = ({ onClose }) => {
             >
               Cancel
             </button>
+
             <button
               onClick={handleSave}
               disabled={saving || saved}
@@ -186,10 +204,10 @@ const RolePickerPopup = ({ onClose }) => {
       <style>{`
         @keyframes popIn {
           from { opacity: 0; transform: translateY(-8px) scale(.97); }
-          to   { opacity: 1; transform: translateY(0)   scale(1);    }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
-    </>
+    </div>
   );
 };
 
