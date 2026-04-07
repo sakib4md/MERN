@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../hooks/useTheme";
 import RolePickerPopup from "./RolePickerPopup";
 
 const HEADER_TITLES = {
@@ -42,11 +42,10 @@ const Header = () => {
               <Link
                 key={to}
                 to={to}
-                className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-semibold transition-all ${
-                  isActive(to)
+                className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-semibold transition-all ${isActive(to)
                     ? 'bg-slate-100 text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-100'
                     : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 {label}
               </Link>

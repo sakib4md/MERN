@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { useState } from "react";
 import { AuthProvider } from "./context/AuthContext";
-import { ThemeProvider } from "./context/ThemeContext";
+import { ThemeProvider } from "./context/ThemeProvider";
 import RolePickerPopup from "./components/RolePickerPopup";
 import SupportChat from "./components/SupportForm";
 

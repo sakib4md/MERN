@@ -3,7 +3,7 @@ const router = express.Router();
 const { body } = require("express-validator");
 const {
   registerUser, loginUser, getProfile,
-  getAllUsers, getUsersPaginated,
+  getAllUsers, getUsersPaginated, exportUsersCSV,
   updateProfile, deleteUser, updateUserById,
 } = require("../controllers/userController");
 const { protect } = require("../middleware/authMiddleware");
@@ -33,5 +33,8 @@ router.put("/:id", protect, requireMinRole("moderator"), updateUserById);
 router.delete("/:id", protect, requireRole("admin"), deleteUser);
 
 router.get("/", protect, requireMinRole("viewer"), getUsersPaginated);
+
+// NEW: Export filtered users as CSV (admin only, no pagination)
+router.get("/export", protect, requireRole("admin"), exportUsersCSV);
 
 module.exports = router;

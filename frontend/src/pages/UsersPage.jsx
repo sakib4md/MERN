@@ -16,6 +16,8 @@ const UsersPage = () => {
     email: 0,
     createdAt: 0,
   });
+  const [roleFilter, setRoleFilter] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: "", email: "", role: "" });
 
@@ -40,6 +42,10 @@ const UsersPage = () => {
     [sortConfig],
   );
 
+  useEffect(() => {
+    setRoleFilter("");
+  }, [search]);
+
   const toggleFieldSort = useCallback((field) => {
     setSortConfig((prev) => ({
       ...prev,
@@ -49,13 +55,14 @@ const UsersPage = () => {
   }, []);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["users", { page, search, limit, sortConfig }],
+    queryKey: ["users", { page, search, roleFilter, limit, sortConfig }],
     queryFn: () =>
       api
         .get(
           `/api/users?page=${page}&limit=${limit}` +
-            `&search=${encodeURIComponent(search)}` +
-            `&sort=${encodeURIComponent(sortString)}`,
+          `&search=${encodeURIComponent(search)}` +
+          (roleFilter ? `&role=${encodeURIComponent(roleFilter)}` : "") +
+          `&sort=${encodeURIComponent(sortString)}`,
         )
         .then((r) => r.data),
     enabled: !!token,
@@ -104,6 +111,36 @@ const UsersPage = () => {
         <p className="mt-2 text-sm">{error.message}</p>
       </div>
     );
+  const handleExport = async () => {
+    if (!users.length) {
+      alert("No users to export");
+      return;
+    }
+    setExportLoading(true);
+    try {
+      const params = new URLSearchParams({
+        search,
+        ...(roleFilter && { role: roleFilter }),
+        sort: sortString || "name",
+      });
+      const response = await api.get(`/api/users/export?${params}`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `users-${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Export failed: " + (err.response?.data?.message || err.message));
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   return (
     <section className="space-y-6">
@@ -120,6 +157,21 @@ const UsersPage = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            >
+              <option value="">All Roles</option>
+              {roles.getRoleOptions().map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
             <input
               type="text"
               value={search}
@@ -139,16 +191,33 @@ const UsersPage = () => {
                     setPage(1);
                   }}
                   className={`rounded-2xl px-3 py-1 text-sm font-semibold transition
-                    ${
-                      limit === n
-                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950"
-                        : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                    ${limit === n
+                      ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950"
+                      : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
                     }`}
                 >
                   {n}
                 </button>
               ))}
             </div>
+            <button 
+              onClick={handleExport}
+              disabled={exportLoading || !users.length || isLoading}
+              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition ${
+                exportLoading || !users.length || isLoading
+                  ? 'cursor-not-allowed bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                  : 'bg-sky-500 hover:bg-sky-600 text-white shadow-sm hover:shadow-md'
+              }`}
+            >
+              {exportLoading ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Exporting...
+                </>
+              ) : (
+                'Export CSV'
+              )}
+            </button>
           </div>
         </div>
 
@@ -189,106 +258,106 @@ const UsersPage = () => {
             <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-transparent">
               {isLoading
                 ? Array.from({ length: limit }).map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      {Array(6)
-                        .fill(0)
-                        .map((__, j) => (
-                          <td key={j} className="px-4 py-4">
-                            <div className="h-4 rounded bg-slate-100 dark:bg-slate-800" />
-                          </td>
-                        ))}
-                    </tr>
-                  ))
+                  <tr key={i} className="animate-pulse">
+                    {Array(6)
+                      .fill(0)
+                      .map((__, j) => (
+                        <td key={j} className="px-4 py-4">
+                          <div className="h-4 rounded bg-slate-100 dark:bg-slate-800" />
+                        </td>
+                      ))}
+                  </tr>
+                ))
                 : users.map((user) => (
-                    <tr
-                      key={user._id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-900/60"
-                    >
-                      <td className="px-4 py-3">
-                        {editingId === user._id ? (
-                          <div className="flex flex-col gap-1">
-                            <input
-                              value={editForm.name}
-                              onChange={(e) =>
-                                setEditForm((s) => ({
-                                  ...s,
-                                  name: e.target.value,
-                                }))
-                              }
-                              className="rounded-md border px-2 py-1 text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
-                            />
-                            <select
-                              value={editForm.role}
-                              onChange={(e) =>
-                                setEditForm((s) => ({
-                                  ...s,
-                                  role: e.target.value,
-                                }))
-                              }
-                              className="rounded-md border px-2 py-1 text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
-                            >
-                              {roles
-                                .getRoleOptions()
-                                .map(({ value, label }) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                            </select>
-                          </div>
-                        ) : (
-                          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                            {user.name}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {editingId === user._id ? (
+                  <tr
+                    key={user._id}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-900/60"
+                  >
+                    <td className="px-4 py-3">
+                      {editingId === user._id ? (
+                        <div className="flex flex-col gap-1">
                           <input
-                            value={editForm.email}
+                            value={editForm.name}
                             onChange={(e) =>
                               setEditForm((s) => ({
                                 ...s,
-                                email: e.target.value,
+                                name: e.target.value,
                               }))
                             }
-                            className="w-full rounded-md border px-2 py-1 text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                            className="rounded-md border px-2 py-1 text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                           />
-                        ) : (
-                          <span className="text-sm text-slate-600 dark:text-slate-300">
-                            {user.email}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${roleColors[user.role] ?? "bg-slate-400 text-white"}`}
-                        >
-                          {user.role?.toUpperCase() ?? "VIEWER"}
+                          <select
+                            value={editForm.role}
+                            onChange={(e) =>
+                              setEditForm((s) => ({
+                                ...s,
+                                role: e.target.value,
+                              }))
+                            }
+                            className="rounded-md border px-2 py-1 text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                          >
+                            {roles
+                              .getRoleOptions()
+                              .map(({ value, label }) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {user.name}
                         </span>
-                      </td>
+                      )}
+                    </td>
 
-                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
-                        {user.status ?? "active"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
-                        {new Date(user.createdAt).toLocaleDateString()}
-                      </td>
-
-                      <td className="px-4 py-3 text-right">
-                        <UserActions
-                          user={user}
-                          editingId={editingId}
-                          setEditingId={setEditingId}
-                          editForm={editForm}
-                          setEditForm={setEditForm}
-                          refetch={refetch}
+                    <td className="px-4 py-3">
+                      {editingId === user._id ? (
+                        <input
+                          value={editForm.email}
+                          onChange={(e) =>
+                            setEditForm((s) => ({
+                              ...s,
+                              email: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-md border px-2 py-1 text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                         />
-                      </td>
-                    </tr>
-                  ))}
+                      ) : (
+                        <span className="text-sm text-slate-600 dark:text-slate-300">
+                          {user.email}
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${roleColors[user.role] ?? "bg-slate-400 text-white"}`}
+                      >
+                        {user.role?.toUpperCase() ?? "VIEWER"}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+                      {user.status ?? "active"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </td>
+
+                    <td className="px-4 py-3 text-right">
+                      <UserActions
+                        user={user}
+                        editingId={editingId}
+                        setEditingId={setEditingId}
+                        editForm={editForm}
+                        setEditForm={setEditForm}
+                        refetch={refetch}
+                      />
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
@@ -353,10 +422,9 @@ const UsersPage = () => {
                   onClick={() => goTo(p)}
                   disabled={isLoading}
                   className={`flex h-9 w-9 items-center justify-center rounded-xl border text-sm font-semibold transition
-                    ${
-                      p === page
-                        ? "border-sky-400 bg-sky-500 text-white shadow-sm"
-                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    ${p === page
+                      ? "border-sky-400 bg-sky-500 text-white shadow-sm"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                     }`}
                 >
                   {p}

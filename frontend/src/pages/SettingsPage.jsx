@@ -1,5 +1,5 @@
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../hooks/useTheme';
 import { getRoleOptions, roleColors, can, ROLES } from '../utils/roles';
 import api from '../api/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
@@ -49,13 +49,13 @@ const SettingsPage = () => {
       </div>
 
       <div className="flex gap-4 mb-8">
-        <button 
+        <button
           onClick={() => setActiveTab('roles')}
           className={`px-6 py-2 rounded-2xl font-semibold ${activeTab === 'roles' ? 'bg-sky-500 text-white' : 'bg-slate-100 dark:bg-slate-900'}`}
         >
           Roles
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('permissions')}
           className={`px-6 py-2 rounded-2xl font-semibold ${activeTab === 'permissions' ? 'bg-sky-500 text-white' : 'bg-slate-100 dark:bg-slate-900'}`}
         >
@@ -72,7 +72,7 @@ const SettingsPage = () => {
                 <span className={`px-3 py-1 rounded-full text-sm font-semibold ${roleColors[user.role] || 'bg-slate-400 text-slate-900'}`}>
                   {roleDisplayMap[user.role] || user.role?.toUpperCase() || 'VIEWER'}
                 </span>
-                <button 
+                <button
                   onClick={() => setShowRoleChanger(!showRoleChanger)}
                   className="text-xs bg-sky-500 hover:bg-sky-600 text-white px-3 py-1 rounded-full transition-colors font-medium"
                   disabled={!can(user.role, 'manageSettings')}
@@ -89,11 +89,10 @@ const SettingsPage = () => {
                       <button
                         key={option.value}
                         onClick={() => handleRealRoleChange(option.value)}
-                        className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all ${
-                          isSelected 
-                            ? 'bg-sky-500 text-white shadow-sm' 
+                        className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all ${isSelected
+                            ? 'bg-sky-500 text-white shadow-sm'
                             : 'hover:bg-sky-50 dark:hover:bg-sky-900/50 text-slate-900 dark:text-slate-100'
-                        }`}
+                          }`}
                       >
                         <span className="font-medium">{display}</span>
                         {isSelected && <span>✓</span>}

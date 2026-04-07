@@ -79,6 +79,77 @@ const getUsersPaginated = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// NEW: Export ALL filtered users as CSV (no pagination, admin only)
+const exportUsersCSV = async (req, res, next) => {
+  try {
+    const search = (req.query.search || "").toString().trim();
+    const role = req.query.role?.toString().trim();
+    const sortStr = (req.query.sort || "name").toString().trim();
+    
+    // Same query logic as paginated, but NO pagination
+    const match = {};
+    if (search) {
+      match.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+    if (role && ['viewer','editor','moderator','cs','admin'].includes(role)) {
+      match.role = role;
+    }
+    
+    const allowedFields = ["name", "email", "createdAt"];
+    const sortObj = {};
+    sortStr.split(",").forEach(f => {
+      const field = f.replace(/^-/, "");
+      if (allowedFields.includes(field)) {
+        sortObj[field] = f.startsWith("-") ? -1 : 1;
+      }
+    });
+    if (!Object.keys(sortObj).length) sortObj.name = 1;
+    
+    // Max 50k rows for performance
+    const maxRows = 50000;
+    const total = await User.countDocuments(match);
+    if (total > maxRows) {
+      return res.status(400).json({ 
+        message: `Too many users (${total.toLocaleString()}). Max ${maxRows.toLocaleString()}. Use more specific filters.` 
+      });
+    }
+    
+    const users = await User.find(match, "name email role createdAt status")
+      .sort(sortObj)
+      .lean(); // lean for performance
+    
+    // Build CSV
+    const headers = ["Name", "Email", "Role", "Status", "Created At"];
+    let csv = headers.join(",") + "\n";
+    
+    users.forEach(user => {
+      const row = [
+        `"${(user.name || '').replace(/"/g, '""')}"`,
+        `"${(user.email || '').replace(/"/g, '""')}"`,
+        `"${(user.role || '').replace(/"/g, '""')}"`,
+        `"${(user.status || 'active').replace(/"/g, '""')}"`,
+        `"${new Date(user.createdAt).toLocaleString().replace(/"/g, '""')}"`
+      ];
+      csv += row.join(",") + "\n";
+    });
+    
+    // CSV response headers
+    res.set({
+      "Content-Type": "text/csv",
+      "Content-Disposition": 'attachment; filename="users.csv"',
+      "Content-Length": Buffer.byteLength(csv, "utf8")
+    });
+    
+    res.status(200).send(csv);
+    
+  } catch (err) {
+    next(err);
+  }
+};
+
 /**
  * PUT /api/users/profile
  * Allows user to update name, email, password.
@@ -135,5 +206,5 @@ const updateUserById = async (req, res, next) => {
 
 module.exports = {
   registerUser, loginUser, getProfile, getAllUsers,
-  getUsersPaginated, updateProfile, deleteUser, updateUserById,
+  getUsersPaginated, exportUsersCSV, updateProfile, deleteUser, updateUserById,
 };
