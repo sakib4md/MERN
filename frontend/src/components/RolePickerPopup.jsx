@@ -71,9 +71,6 @@ const RolePickerPopup = ({ onClose }) => {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
 
-  // Debug logging
-  console.log('🔑 RolePickerPopup - user:', user ? user.email : 'NO USER', 'loading:', loading, 'AuthContext fully loaded?');
-
   if (loading) {
     return (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
@@ -91,7 +88,6 @@ const RolePickerPopup = ({ onClose }) => {
   }
 
   if (!user) {
-    console.warn('🚫 RolePickerPopup: No authenticated user found. Closing popup.');
     onClose();
     return null;
   }
