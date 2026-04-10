@@ -1,0 +1,1 @@
+[[redirects]]\n  from = \"/*\"\n  to = \"/index.html\"\n  status = 200\n\n# Handles client-side routing (React Router, Vite SPA)\n# Force all paths to index.html for SPA
