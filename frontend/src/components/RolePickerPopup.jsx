@@ -65,13 +65,33 @@ const ROLES = [
 ];
 
 const RolePickerPopup = ({ onClose }) => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, loading } = useAuth();
   const [selected, setSelected] = useState(user?.role || "viewer");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-const [error, setError] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Debug logging
+  console.log('🔑 RolePickerPopup - user:', user ? user.email : 'NO USER', 'loading:', loading, 'AuthContext fully loaded?');
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+        <div className="bg-white p-8 rounded-3xl shadow-2xl border-2 border-sky-200 max-w-sm mx-4 dark:bg-slate-900 dark:border-sky-800">
+          <div className="flex flex-col items-center space-y-4 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-sky-100 border-t-sky-500"></div>
+            <div>
+              <p className="font-semibold text-slate-900 dark:text-slate-100">Loading Profile...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Checking authentication</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
+    console.warn('🚫 RolePickerPopup: No authenticated user found. Closing popup.');
     onClose();
     return null;
   }

@@ -19,7 +19,7 @@ const SettingsPage = () => {
     [ROLES.CS]: 'Customer Support',
     [ROLES.ADMIN]: 'Admin'
   };
-
+console.log(user)
   const handleRealRoleChange = async (roleValue) => {
     try {
       const response = await updateProfile({ role: roleValue });

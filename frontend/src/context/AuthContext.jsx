@@ -12,10 +12,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
+    console.log('🔍 AuthContext - token present?', !!token, token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+
     const loadProfile = async () => {
       setLoading(true);
+      console.log('📡 Fetching /api/users/profile...');
 
       if (!token) {
+        console.log('🚫 No token → user=null');
         if (mounted) {
           setUser(null);
           setLoading(false);
@@ -23,14 +27,37 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
+      // Decode JWT payload (client-side decode)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const expDate = new Date(payload.exp * 1000);
+        const expired = expDate < new Date();
+        console.log('📋 JWT decoded:', { 
+          id: payload.id, 
+          email: payload.email,
+          exp: expDate.toISOString(),
+          expired 
+        });
+      } catch (decodeErr) {
+        console.error('❌ JWT decode failed:', decodeErr);
+      }
+
       // don't set api.defaults headers here; request interceptor reads token from storage
 
       try {
         const res = await api.get("/api/users/profile");
+        console.log('✅ Profile fetched successfully');
         if (mounted) setUser(res.data.user);
       } catch (err) {
+        console.error('❌ Profile fetch failed:', {
+          status: err.response?.status,
+          message: err.response?.data?.message || err.message,
+          url: err.config?.url
+        });
+        
         // Only clear token when server explicitly rejects it
         if (err.response && err.response.status === 401) {
+          console.log('🔓 401 detected → clearing invalid token');
           if (mounted) {
               setToken(null);
               setUser(null);
@@ -38,10 +65,11 @@ export const AuthProvider = ({ children }) => {
           }
         } else {
           // transient error (network/CORS/timeout) — keep token and let user retry
-          console.error("Failed to fetch profile:", err);
+          console.error("Transient profile error - keeping token:", err);
         }
       } finally {
         if (mounted) setLoading(false);
+        console.log('🏁 Profile load complete. user:', !!user, 'loading:', false);
       }
     };
 
