@@ -1,1 +1,1 @@
-[[redirects]]\nfrom = \"/*\"\nto = \"/index.html\"\nstatus = 200
+[[redirects]]\n  from = \"/*\"\n  to = \"/index.html\"\n  status = 200
