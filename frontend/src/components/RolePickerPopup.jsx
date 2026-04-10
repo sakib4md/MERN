@@ -69,7 +69,12 @@ const RolePickerPopup = ({ onClose }) => {
   const [selected, setSelected] = useState(user?.role || "viewer");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState(null);
+const [error, setError] = useState(null);
+
+  if (!user) {
+    onClose();
+    return null;
+  }
 
   const handleSave = async () => {
     if (selected === user?.role) {

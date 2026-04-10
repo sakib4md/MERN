@@ -37,7 +37,10 @@ const SettingsPage = () => {
     enabled: !!token,
   });
 
-  if (!user) return <div className="p-8 text-center">Login required</div>;
+if (!user) return <div className="p-8 text-center">Login required</div>;
+
+// Explicit: ensure role UI gated
+
 
   console.log('Current user role:', user.role);
 
