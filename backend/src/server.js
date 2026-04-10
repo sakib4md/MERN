@@ -16,6 +16,7 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:5173",
+    "https://silver-buttercream-7ba8db.netlify.app",
     "https://your-netlify-app.netlify.app"
   ],
   credentials: true
